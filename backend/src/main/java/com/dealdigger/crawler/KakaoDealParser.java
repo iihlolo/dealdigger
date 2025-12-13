@@ -16,6 +16,7 @@ import java.util.List;
 @Component
 public class KakaoDealParser {
 
+    private static final String KAKAO_STORE_BASE_URL = "https://store.kakao.com";
     private static final DateTimeFormatter KAKAO_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     public List<CreateProductRequest> parse(JsonNode products) {
@@ -31,6 +32,9 @@ public class KakaoDealParser {
                         ? p.get("maxDiscountedPrice").asInt()
                         : p.path("groupDiscountedPrice").asInt(0);
 
+                String rawLinkPath = p.path("linkPath").asText("");
+                String linkPath = KAKAO_STORE_BASE_URL + rawLinkPath;
+
                 JsonNode periodNode = p.path("groupDiscountPeriod");
                 String start = periodNode.path("from").asText();
                 String end = periodNode.path("to").asText();
@@ -43,7 +47,7 @@ public class KakaoDealParser {
                         .imageUrl(p.path("productImageOrigin").asText(""))
                         .originalPrice(p.path("originalPrice").asInt(0))
                         .discountedPrice(discountedPrice)
-                        .linkPath(p.path("linkPath").asText(""))
+                        .linkPath(linkPath)
                         .deliveryFeeType(p.path("deliveryFeeType").asText(""))
                         .hasAdditionalOptionPrice(p.path("hasAdditionalOptionPrice").asBoolean(false))
                         .discountStartDate(discountStartDate)

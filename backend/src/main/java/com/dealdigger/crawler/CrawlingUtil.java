@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.http.HttpHeaders;
 
 import java.time.Duration;
 
@@ -15,10 +16,13 @@ public class CrawlingUtil {
 
     private final WebClient webClient;
 
-    public String fetchHtml(String url) {
+    public String fetchHtml(String url, String referer) {
         try {
             return webClient.get()
                 .uri(url)
+                .header(HttpHeaders.USER_AGENT, "Mozilla/5.0")
+                .header(HttpHeaders.REFERER, referer)
+                .header(HttpHeaders.ACCEPT, "application/json, text/plain, */*")
                 .retrieve()
                 .bodyToMono(String.class)
                 .timeout(Duration.ofSeconds(5))
