@@ -1,5 +1,7 @@
 package com.dealdigger.dto;
 
+import com.dealdigger.domain.ProductSource;
+
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -9,13 +11,16 @@ import java.time.LocalDateTime;
 public class ProductResponse {
     
     private String id;
+    private ProductSource source;
+    private String externalProductId;
     private String productName;
     private String imageUrl;
+    private String productUrl;
     private int originalPrice;
     private int discountedPrice;
-    private String linkPath;
-    private String deliveryFeeType;
+    private int discountRate;
     private boolean hasAdditionalOptionPrice;
+    private boolean freeDelivery;
     private LocalDateTime discountEndDate;
-    private boolean liked; 
+    private boolean liked;
 }

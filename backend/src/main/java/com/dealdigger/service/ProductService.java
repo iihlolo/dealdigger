@@ -8,6 +8,7 @@ import com.dealdigger.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -16,48 +17,63 @@ import java.util.List;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final WishService wishService;
 
     /**
      * Create
      * Add a new product
      */
     public ProductResponse save(CreateProductRequest req) {
-        Product p = Product.builder()
-                .productName(req.getProductName())
-                .imageUrl(req.getImageUrl())
-                .originalPrice(req.getOriginalPrice())
-                .discountedPrice(req.getDiscountedPrice())
-                .linkPath(req.getLinkPath())
-                .deliveryFeeType(req.getDeliveryFeeType())
-                .hasAdditionalOptionPrice(req.isHasAdditionalOptionPrice())
-                .discountStartDate(req.getDiscountStartDate())
-                .discountEndDate(req.getDiscountEndDate())
-                .liked(false)
-                .build();
+        Product p = productRepository
+                .findBySourceAndExternalProductId(
+                        req.getSource(),
+                        req.getExternalProductId()
+                )
+                .orElseGet(() -> Product.builder()
+                        .source(req.getSource())
+                        .externalProductId(req.getExternalProductId())
+                        .productName(req.getProductName())
+                        .imageUrl(req.getImageUrl())
+                        .productUrl(req.getProductUrl())
+                        .originalPrice(req.getOriginalPrice())
+                        .discountedPrice(req.getDiscountedPrice())
+                        .discountRate(req.getDiscountRate())
+                        .hasAdditionalOptionPrice(req.isHasAdditionalOptionPrice())
+                        .freeDelivery(req.isFreeDelivery())
+                        .discountStartDate(req.getDiscountStartDate())
+                        .discountEndDate(req.getDiscountEndDate())
+                        .liked(false)
+                        .build()
+            );
 
+        p.addWish(req.getMatchedWishId());
         return toResponse(productRepository.save(p));
-    }
-
-    /**
-     * Read
-     * Find all products
-     */
-    public List<ProductResponse> findAll() {
-        return productRepository.findAll().stream()
-                .map(this::toResponse)
-                .toList();
     }
 
     /** 
      * Read
-     * Search products by keyword
+     * Find products by wish ID
      */
-    public List<ProductResponse> searchByKeyword(String keyword) {
-        return productRepository.findByProductNameContainingIgnoreCase(keyword)
+    public List<ProductResponse> findByWish(String wishId) {
+        return productRepository.findByMatchedWishIds(wishId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
+
+    /**
+     * Read
+     * Find today's added products
+     */
+    public List<ProductResponse> findTodayProducts() {
+        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
+
+        return productRepository.findByCreatedAtAfter(startOfToday)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
 
     /**
      * Update
@@ -67,7 +83,7 @@ public class ProductService {
         Product p = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Not found"));
 
-        p.setLiked(!p.isLiked());
+        p.toggleLike();
 
         return toResponse(productRepository.save(p));
     }
@@ -87,13 +103,16 @@ public class ProductService {
     private ProductResponse toResponse(Product p) {
         return ProductResponse.builder()
                 .id(p.getId())
+                .source(p.getSource())
+                .externalProductId(p.getExternalProductId())
                 .productName(p.getProductName())
                 .imageUrl(p.getImageUrl())
+                .productUrl(p.getProductUrl())
                 .originalPrice(p.getOriginalPrice())
                 .discountedPrice(p.getDiscountedPrice())
-                .linkPath(p.getLinkPath())
-                .deliveryFeeType(p.getDeliveryFeeType())
+                .discountRate(p.getDiscountRate())
                 .hasAdditionalOptionPrice(p.isHasAdditionalOptionPrice())
+                .freeDelivery(p.isFreeDelivery())
                 .discountEndDate(p.getDiscountEndDate())
                 .liked(p.isLiked())
                 .build();

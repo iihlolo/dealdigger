@@ -8,7 +8,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 
 @Document("wishitems")
-@Getter @Setter @Builder
+@Getter @Builder
 @AllArgsConstructor @NoArgsConstructor
 public class WishItem {
 
@@ -17,6 +17,8 @@ public class WishItem {
 
     @Indexed(unique = true)
     private String keyword;
+
+    private int desiredDiscountRate;
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

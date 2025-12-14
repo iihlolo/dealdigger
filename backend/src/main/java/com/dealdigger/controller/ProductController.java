@@ -17,22 +17,22 @@ public class ProductController {
 
     /**
      * Read
-     * Find all products
+     * Find products by wish ID
      */
-    @GetMapping
-    public List<ProductResponse> all() {
-        return productService.findAll();
+    @GetMapping("/by-wish/{wishId}")
+    public List<ProductResponse> findByWish(@PathVariable String wishId) {
+        return productService.findByWish(wishId);
     }
-
+   
     /**
      * Read
-     * Search products by keyword
+     * Find today's added products
      */
-    @GetMapping("/search")
-    public List<ProductResponse> search(@RequestParam String keyword) {
-        return productService.searchByKeyword(keyword);
+    @GetMapping("/today")
+    public List<ProductResponse> today() {
+        return productService.findTodayProducts();
     }
-    
+
     /**
      * Update
      * Toggle like status
