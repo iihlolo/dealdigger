@@ -20,6 +20,7 @@ public class WishService {
 
     private final WishRepository wishRepository;
     private final ProductRepository productRepository;
+    private final CrawlerService crawlerService;
 
     /**
      * Create
@@ -36,7 +37,11 @@ public class WishService {
                 .desiredDiscountRate(req.getDesiredDiscountRate())
                 .build();
 
-        return toResponse(wishRepository.save(w));
+        WishItem saved = wishRepository.save(w);
+
+        crawlerService.crawlAndSaveKakaoDeals(saved);
+
+        return toResponse(saved);
     }
 
     /**

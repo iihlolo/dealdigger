@@ -1,66 +1,64 @@
 package com.dealdigger.crawler;
 
+import com.dealdigger.domain.ProductSource;
 import com.dealdigger.dto.CreateProductRequest;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class KakaoDealParser {
 
     private static final String KAKAO_STORE_BASE_URL = "https://store.kakao.com";
-    private static final DateTimeFormatter KAKAO_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
-    public List<CreateProductRequest> parse(JsonNode products) {
-        if (products == null || !products.isArray()) {
-            return Collections.emptyList();
+    public List<CreateProductRequest> parse(String responseBody) throws JsonProcessingException{
+        
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(responseBody);
+        
+        JsonNode contents = root.path("data").path("contents");
+        if (!contents.isArray()) {
+            return List.of();
         }
 
-        List<CreateProductRequest> list = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
 
-        for (JsonNode p : products) {
-            try {
-                int discountedPrice = p.has("maxDiscountedPrice")
-                        ? p.get("maxDiscountedPrice").asInt()
-                        : p.path("groupDiscountedPrice").asInt(0);
+        List<CreateProductRequest> results = new ArrayList<>();
 
-                String rawLinkPath = p.path("linkPath").asText("");
-                String linkPath = KAKAO_STORE_BASE_URL + rawLinkPath;
+        for (JsonNode item : contents) {
+            String imageUrl = item.hasNonNull("productImageOrigin")
+                    ? item.get("productImageOrigin").asText()
+                    : item.get("productImage").asText();
 
-                JsonNode periodNode = p.path("groupDiscountPeriod");
-                String start = periodNode.path("from").asText();
-                String end = periodNode.path("to").asText();
+            CreateProductRequest req = CreateProductRequest.builder()
+                    .source(ProductSource.KAKAO_STORE)
+                    .externalProductId(item.get("productId").asText())
+                    .productName(item.get("productName").asText())
+                    .imageUrl(imageUrl)
+                    .productUrl(KAKAO_STORE_BASE_URL + item.get("linkPath").asText())
+                    .originalPrice(item.get("originalPrice").asInt())
+                    .discountedPrice(item.get("discountedPrice").asInt())
+                    .discountRate(item.get("discountRate").asInt())
+                    .hasAdditionalOptionPrice(item.get("hasAdditionalOptionPrice").asBoolean(false))
+                    .freeDelivery(item.get("freeDelivery").asBoolean(false))
+                    .discountStartDate(now)
+                    .discountEndDate(now.plusDays(1))
+                    .matchedWishId(null)
+                    .build();
 
-                LocalDateTime discountStartDate = LocalDateTime.parse(start, KAKAO_DATE_FORMATTER);
-                LocalDateTime discountEndDate = LocalDateTime.parse(end, KAKAO_DATE_FORMATTER);
-
-                CreateProductRequest req = CreateProductRequest.builder()
-                        .productName(p.path("productName").asText(""))
-                        .imageUrl(p.path("productImageOrigin").asText(""))
-                        .originalPrice(p.path("originalPrice").asInt(0))
-                        .discountedPrice(discountedPrice)
-                        .linkPath(linkPath)
-                        .deliveryFeeType(p.path("deliveryFeeType").asText(""))
-                        .hasAdditionalOptionPrice(p.path("hasAdditionalOptionPrice").asBoolean(false))
-                        .discountStartDate(discountStartDate)
-                        .discountEndDate(discountEndDate)
-                        .build();
-
-                list.add(req);
-
-            } catch (Exception e) {
-                log.error("Failed to parse a product", e);
-            }
+                results.add(req);
         }
 
-        return list;
+        return results;
     }
 }

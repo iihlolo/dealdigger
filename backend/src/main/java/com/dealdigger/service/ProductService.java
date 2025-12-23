@@ -17,7 +17,6 @@ import java.util.List;
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final WishService wishService;
 
     /**
      * Create

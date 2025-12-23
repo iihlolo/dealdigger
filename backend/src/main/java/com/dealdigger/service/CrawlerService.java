@@ -1,8 +1,10 @@
 package com.dealdigger.service;
 
+import com.dealdigger.domain.WishItem;
 import com.dealdigger.crawler.KakaoCrawler;
 import com.dealdigger.crawler.KakaoDealParser;
 import com.dealdigger.dto.CreateProductRequest;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,36 +16,52 @@ import java.util.List;
 @Slf4j
 public class CrawlerService {
 
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_SIZE = 100;
+
     private final KakaoCrawler kakaoCrawler;
     private final KakaoDealParser kakaoDealParser;
     private final ProductService productService;
 
     /**
-     * Crawl and Save Kakao Store 1+1 Deals
+     * Crawl and Save Kakao Store Deals
      */
-    public void crawlAndSaveKakaoDeals() {
+    public void crawlAndSaveKakaoDeals(WishItem wish) {
         try {
-            var productsJson = kakaoCrawler.fetch();
-            if (productsJson == null || !productsJson.isArray() || productsJson.size() == 0) {
-                log.warn("No products found from KakaoCrawler");
-                return;
-            }
+            String response = kakaoCrawler.crawl(wish.getKeyword(), DEFAULT_PAGE, DEFAULT_SIZE);
+            if (response == null || response.isBlank()) return;
 
-            List<CreateProductRequest> productRequests = kakaoDealParser.parse(productsJson);
+            List<CreateProductRequest> parsed = kakaoDealParser.parse(response);
+            if (parsed.isEmpty()) return;
 
-            if (productRequests.isEmpty()) {
-                log.warn("No products parsed from KakaoCrawler output");
-                return;
-            }
+            List<CreateProductRequest> filtered = parsed.stream()
+                    .filter(p -> p.getDiscountRate() >= wish.getDesiredDiscountRate())
+                    .map(p -> injectMatchedWishId(p, wish.getId()))
+                    .toList();
+            if (filtered.isEmpty()) return;
 
-            for (CreateProductRequest req : productRequests) {
-                productService.save(req);
-            }
-
-            log.info("Successfully saved {} products from Kakao Store", productRequests.size());
+            filtered.forEach(productService::save);
 
         } catch (Exception e) {
-            log.error("Error during crawling and saving Kakao Store deals", e);
+            log.error("Failed to crawl and save Kakao deals. wishId={}, keyword={}", wish.getId(), wish.getKeyword(), e);
         }
+    }
+
+    private CreateProductRequest injectMatchedWishId(CreateProductRequest req, String wishId) {
+        return CreateProductRequest.builder()
+                .source(req.getSource())
+                .externalProductId(req.getExternalProductId())
+                .productName(req.getProductName())
+                .imageUrl(req.getImageUrl())
+                .productUrl(req.getProductUrl())
+                .originalPrice(req.getOriginalPrice())
+                .discountedPrice(req.getDiscountedPrice())
+                .discountRate(req.getDiscountRate())
+                .hasAdditionalOptionPrice(req.isHasAdditionalOptionPrice())
+                .freeDelivery(req.isFreeDelivery())
+                .discountStartDate(req.getDiscountStartDate())
+                .discountEndDate(req.getDiscountEndDate())
+                .matchedWishId(wishId)
+                .build();
     }
 }

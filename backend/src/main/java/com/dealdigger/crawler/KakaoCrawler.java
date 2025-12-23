@@ -1,46 +1,49 @@
 package com.dealdigger.crawler;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.dealdigger.dto.CrawlRequest;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
+import java.util.Map;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class KakaoCrawler {
 
-    private final String KAKAO_THEME_DEAL_LIST_URL = "https://store.kakao.com/a/f-s/home/theme-deal/list?page=0&anchorId=&date=";
-    private final String KAKAO_THEME_DEAL_REFERER = "https://store.kakao.com/home/themedeal/";
+    private static final String KAKAO_SEARCH_PATH = "/a/f-s/search/products";
+    private static final String KAKAO_REFERER_BASE = "https://store.kakao.com/search/result/product?q=";
     
     private final CrawlingUtil crawlingUtil;
-    private final ObjectMapper objectMapper;
 
-    public JsonNode fetch() {
-        try {
-            long ts = System.currentTimeMillis();
-            String day = "friday";//getTodayAsQueryDay();
+    public String crawl(String keyword, int page, int size) {
 
-            String listUrl = KAKAO_THEME_DEAL_LIST_URL + day + "&_=" + ts;
-            String referer = KAKAO_THEME_DEAL_REFERER + day;
+        String now = String.valueOf(System.currentTimeMillis());
 
-            String listHtml = crawlingUtil.fetchHtml(listUrl, referer);
+        CrawlRequest req = CrawlRequest.builder()
+                .method(HttpMethod.GET)
+                .url(KAKAO_SEARCH_PATH)
+                .queryParams(Map.of(  
+                        "q", keyword,
+                        "searchType", "recent",
+                        "sort", "POPULAR",
+                        "timestamp", now,
+                        "page", String.valueOf(page),
+                        "size", String.valueOf(size),
+                        "_", now
+                ))
+                .headers(Map.of(
+                        HttpHeaders.ACCEPT, "application/json, text/plain, */*",
+                        HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE,
+                        HttpHeaders.REFERER, KAKAO_REFERER_BASE + keyword + "&searchType=recent"
+                ))
+                .build();
 
-            log.info("Successfully fetched today's Kakao Store deal products");
-            return objectMapper.readTree(listHtml).path("data").path("products");
-
-        } catch (Exception e) {
-            log.info("Cannot fetch any new products from Kakao Store", e);
-            return null;
-        }
-    }
-
-    private String getTodayAsQueryDay() {
-        DayOfWeek dayOfWeek = LocalDate.now().getDayOfWeek();
-        return dayOfWeek.name().toLowerCase();
+        return crawlingUtil.execute(req);
     }
 }
