@@ -23,7 +23,7 @@ public class KakaoCrawler {
     public JsonNode fetch() {
         try {
             long ts = System.currentTimeMillis();
-            String day = "friday";//getTodayAsQueryDay();
+            String day = getTodayAsQueryDay();
 
             String listUrl = KAKAO_THEME_DEAL_LIST_URL + day + "&_=" + ts;
             String referer = KAKAO_THEME_DEAL_REFERER + day;

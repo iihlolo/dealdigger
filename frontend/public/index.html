@@ -2,19 +2,167 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DealDigger</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      background: linear-gradient(135deg, #fff176 0%, #ffb300 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: auto; }
+    header { text-align: center; margin-bottom: 40px; padding: 20px; }
+    h1 { font-size: 3em; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); margin-bottom: 10px; }
+    .tagline { color: rgba(255,255,255,0.9); font-size: 1.1em; }
+    .section { background: white; padding: 25px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+    .section h2 { margin-bottom: 20px; color: #333; font-size: 1.5em; }
+    .search-box { margin-bottom: 20; }
+    #search { width: 100%; padding: 16px 20px; font-size: 16px; border-radius: 12px; border: 2px solid #e0e0e0; transition: all 0.3s ease; }
+    #search:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+    #wish-form { display: flex; gap: 10px; margin-bottom: 20px; }
+    #wish-input { flex: 1; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #e0e0e0; transition: border-color 0.3s; }
+    #wish-input:focus { outline: none; border-color: #667eea; }
+    button { padding: 12px 24px; border-radius: 8px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; cursor: pointer; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; }
+    button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
+    button:active { transform: translateY(0); }
+    #wish-list { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; }
+    #wish-list li {
+      background: #f5f5f5;
+      padding: 8px 12px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    #wish-list li span { cursor: pointer; }
+    #wish-list button {
+      background: none;
+      color: #ff4757;
+      padding: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    #wish-list button:hover { background: #ffe066; transform: none; box-shadow: none; }
+    #product-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+    .product-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.3s, box-shadow 0.3s; cursor: pointer; position: relative; }
+    .product-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+    .product-image { width: 100%; height: 280px; object-fit: cover; background: #f5f5f5; }
+    .product-info { padding: 16px; }
+    .product-name { font-size: 15px; color: #333; margin-bottom: 12px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 42px; }
+    .price-container { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .original-price { font-size: 14px; color: #999; text-decoration: line-through; }
+    .discount-badge { background: #ff4757; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+    .discounted-price { font-size: 22px; font-weight: 700; color: #667eea; }
+    .product-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0; font-size: 12px; color: #666; }
+    .like-btn { position: absolute; top: 12px; right: 12px; background: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; transition: transform 0.2s; }
+    .like-btn:hover { transform: scale(1.1); }
+    .like-btn.liked { color: #ff4757; }
+    .like-btn:not(.liked) { color: #ddd; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+    @media (max-width: 768px) {
+      h1 { font-size: 2em; }
+      #product-list { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+      .product-image { height: 200px; }
+      .product-info { padding: 12px; }
+      .product-name { font-size: 14px; }
+      .discounted-price { font-size: 18px; }
+    }
+  </style>
 </head>
-<input id="search" placeholder="상품 검색" />
+<body>
+  <div class="container">
+    <header>
+      <h1>🔍 DealDigger</h1>
+      <p class="tagline">최고의 딜을 찾아드립니다</p>
+    </header>
 
-<ul id="product-list"></ul>
+    <div class="section search-box">
+      <input id="search" placeholder="🔎 찾고 싶은 상품을 검색하세요" />
+    </div>
 
-<form id="wish-form">
-  <input id="wish-input" placeholder="위시 키워드" />
-  <button>추가</button>
-</form>
+    <div class="section">
+      <h2>✨ 위시 키워드</h2>
+      <form id="wish-form">
+        <input id="wish-input" placeholder="관심 키워드를 추가하세요" />
+        <button type="submit">추가</button>
+      </form>
+      <ul id="wish-list"></ul>
+    </div>
 
-<ul id="wish-list"></ul>
+    <div class="section">
+      <h2>🎁 상품 목록</h2>
+      <ul id="product-list"></ul>
+    </div>
+  </div>
 
-<script type="module" src="./js/main.js"></script>
+  <script type="module">
+    import { apiGet, apiPost, apiDelete } from './js/api.js';
+
+    import { loadAllProducts as _loadAllProducts, searchProducts as _searchProducts, renderProducts } from './js/products.js';
+    import { loadWishes as _loadWishes, createWish as _createWish } from './js/wishes.js';
+
+    window.loadAllProducts = _loadAllProducts;
+    window.searchProducts = _searchProducts;
+    window.loadWishes = _loadWishes;
+    window.createWish = _createWish;
+
+    // 좋아요 토글
+    window.toggleLike = async (productId) => {
+      await apiPost(`/products/${productId}/like`);
+      const keyword = document.getElementById('search').value.trim();
+      if (keyword) await window.searchProducts(keyword);
+      else await window.loadAllProducts();
+    };
+
+    // 위시 삭제
+    window.deleteWish = async (wishId) => {
+      await apiDelete(`/wishes/${wishId}`);
+      await window.loadWishes();
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      window.loadAllProducts();
+      window.loadWishes();
+
+      // 검색창
+      document.getElementById('search').addEventListener('input', e => {
+        const keyword = e.target.value.trim();
+        if (!keyword) window.loadAllProducts();
+        else window.searchProducts(keyword);
+      });
+
+      // 위시 추가
+      document.getElementById('wish-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const input = document.getElementById('wish-input');
+        if (input.value.trim()) {
+          window.createWish(input.value.trim());
+          input.value = '';
+        }
+      });
+
+      // 위시 클릭 -> 해당 키워드 상품만 필터
+      document.getElementById('wish-list').addEventListener('click', async e => {
+        if (e.target.tagName === 'SPAN') {
+          const keyword = e.target.textContent.trim();
+          if (keyword) await window.searchProducts(keyword);
+        } else if (e.target.tagName === 'BUTTON') {
+          // 삭제 버튼 클릭
+          const wishId = e.target.dataset.id;
+          if (wishId) window.deleteWish(wishId);
+        }
+      });
+    });
+  </script>
+</body>
 </html>

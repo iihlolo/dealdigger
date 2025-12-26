@@ -2,21 +2,45 @@ package com.dealdigger.scheduler;
 
 import com.dealdigger.service.CrawlerService;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
+//@RequiredArgsConstructor
 @Slf4j
 public class DailyCrawlerScheduler {
 
     private final CrawlerService crawlerService;
+    public DailyCrawlerScheduler(CrawlerService crawlerService) {
+        this.crawlerService = crawlerService;
+    }
 
+    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+    public void crawlDailyDeals() {
+        runCrawler();
+    }
+
+    @PostConstruct
+    public void runOnceAtStartup() {
+        runCrawler();
+    }
+
+    private void runCrawler() {
+        try {
+            crawlerService.crawlAndSaveKakaoDeals();
+            log.info("Crawler executed successfully");
+        } catch (Exception e) {
+            log.error("Error during crawling", e);
+        }
+    }
+}
+        /*
     /**
      * Daily crawl at midnight KST
-     */
+     
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     public void crawlDailyDeals() {
         try {
@@ -25,5 +49,4 @@ public class DailyCrawlerScheduler {
         } catch (Exception e) {
             log.error("Error during daily crawling", e);
         }
-    }
-}
+    }*/
